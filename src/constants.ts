@@ -1,0 +1,9 @@
+export const API_BASE_URL = "https://api.zoom.us/v2";
+export const CHARACTER_LIMIT = 25000;
+export const DEFAULT_PAGE_SIZE = 30;
+export const MAX_PAGE_SIZE = 300;
+export const REQUEST_TIMEOUT_MS = 30000;
+export const MAX_RETRIES = 2;
+export const INITIAL_RETRY_DELAY_MS = 1000;
+export const BACKOFF_MULTIPLIER = 2;
+export const MAX_RETRY_DELAY_MS = 10000;
