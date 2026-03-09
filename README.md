@@ -16,13 +16,55 @@ Build:
 npm run build
 ```
 
-## Authentication
+## Zoom App Configuration
 
-Choose one:
+### Server-to-Server OAuth (recommended)
 
-**Server-to-Server OAuth (recommended)**
+This is the recommended approach. It lets the server acquire access tokens automatically without user interaction.
 
-Create a Server-to-Server OAuth app in the [Zoom Marketplace](https://marketplace.zoom.us/) and set:
+#### 1. Create a Zoom Developer account
+
+If you don't have one, sign up at [marketplace.zoom.us/develop](https://marketplace.zoom.us/develop).
+
+#### 2. Create a Server-to-Server OAuth app
+
+1. Go to [marketplace.zoom.us](https://marketplace.zoom.us/) and sign in
+2. Click **Develop** in the top-right dropdown and select **Build App**
+3. Choose **Server-to-Server OAuth** as the app type
+4. Give the app a name (e.g. "MCP Server") and click **Create**
+
+#### 3. Copy your credentials
+
+On the **App Credentials** page you'll see three values:
+
+| Field | Environment Variable |
+|-------|---------------------|
+| Account ID | `ZOOM_ACCOUNT_ID` |
+| Client ID | `ZOOM_CLIENT_ID` |
+| Client Secret | `ZOOM_CLIENT_SECRET` |
+
+#### 4. Add required scopes
+
+Go to the **Scopes** tab and add the scopes your tools need. The table below maps scopes to tool categories:
+
+| Scope | Grants access to |
+|-------|-----------------|
+| `user:read:admin` | `zoom_list_users`, `zoom_get_user` |
+| `user:write:admin` | `zoom_create_user`, `zoom_update_user`, `zoom_delete_user` |
+| `meeting:read:admin` | `zoom_list_meetings`, `zoom_get_meeting`, `zoom_get_past_meeting`, `zoom_get_past_meeting_participants`, `zoom_list_meeting_registrants` |
+| `meeting:write:admin` | `zoom_create_meeting`, `zoom_update_meeting`, `zoom_delete_meeting`, `zoom_end_meeting` |
+| `webinar:read:admin` | `zoom_list_webinars`, `zoom_get_webinar`, `zoom_list_webinar_registrants` |
+| `webinar:write:admin` | `zoom_create_webinar`, `zoom_update_webinar`, `zoom_delete_webinar` |
+| `recording:read:admin` | `zoom_list_recordings`, `zoom_get_meeting_recordings` |
+| `recording:write:admin` | `zoom_delete_meeting_recordings`, `zoom_delete_recording_file`, `zoom_recover_meeting_recordings` |
+
+Add only the scopes you need. For full access to all 24 tools, add all eight scopes above.
+
+#### 5. Activate the app
+
+Click **Activate** on the **Activation** tab. The app is now ready to use.
+
+#### 6. Set environment variables
 
 ```sh
 export ZOOM_ACCOUNT_ID=your_account_id
@@ -30,11 +72,17 @@ export ZOOM_CLIENT_ID=your_client_id
 export ZOOM_CLIENT_SECRET=your_client_secret
 ```
 
-**Static bearer token**
+The server handles OAuth token generation and refresh automatically.
+
+### Static Bearer Token (alternative)
+
+If you already have an access token (e.g. from an existing OAuth flow), pass it directly:
 
 ```sh
 export ZOOM_API_TOKEN=your_token
 ```
+
+This is simpler but requires you to manage token expiration yourself. Tokens expire after 1 hour.
 
 ## Running
 
