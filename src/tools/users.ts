@@ -220,4 +220,99 @@ export function registerUserTools(server: McpServer): void {
       }
     },
   );
+
+  server.registerTool(
+    "zoom_search_users",
+    {
+      title: "Search Users",
+      description:
+        "Search for users by name, email, or other criteria. Filters the full user list server-side by keyword.\n\nUse when: finding a user by partial name or email when you don't have their exact ID.\nDo NOT use when: you already have the user ID or exact email (use zoom_get_user instead).",
+      inputSchema: {
+        query: z
+          .string()
+          .min(1)
+          .max(200)
+          .describe("Search string to match against user name or email"),
+        status: z
+          .enum(["active", "inactive", "pending"])
+          .default("active")
+          .describe("Filter by user status"),
+        page_size: z.number().int().min(1).max(300).default(30).describe("Records per page"),
+        page_number: z.number().int().min(1).default(1).describe("Page number"),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ query, status, page_size, page_number }) => {
+      try {
+        const data = await withRetry(() =>
+          makeApiRequest<{
+            page_count: number;
+            page_number: number;
+            page_size: number;
+            total_records: number;
+            users: ZoomUser[];
+          }>("users", "GET", undefined, { status, page_size, page_number }),
+        );
+
+        const q = query.toLowerCase();
+        const matched = data.users.filter(
+          (u) =>
+            u.first_name?.toLowerCase().includes(q) ||
+            u.last_name?.toLowerCase().includes(q) ||
+            u.email?.toLowerCase().includes(q) ||
+            `${u.first_name} ${u.last_name}`.toLowerCase().includes(q),
+        );
+
+        return createToolResponse({
+          query,
+          total_scanned: data.users.length,
+          total_matched: matched.length,
+          items: matched,
+          note: matched.length === 0 && data.total_records > data.page_size
+            ? "No matches on this page. Try increasing page_size or page_number to search more users."
+            : undefined,
+        });
+      } catch (error) {
+        return createErrorResponse(handleApiError(error));
+      }
+    },
+  );
+
+  server.registerTool(
+    "zoom_get_user_settings",
+    {
+      title: "Get User Settings",
+      description:
+        "Retrieve a user's Zoom settings including meeting defaults, recording preferences, telephony config, and feature access.\n\nUse when: checking or auditing a user's Zoom configuration.\nDo NOT use when: getting basic profile info (use zoom_get_user instead).",
+      inputSchema: {
+        user_id: z
+          .string()
+          .min(1)
+          .describe("The user ID or email address"),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ user_id }) => {
+      try {
+        const data = await withRetry(() =>
+          makeApiRequest<Record<string, unknown>>(
+            `users/${encodeURIComponent(user_id)}/settings`,
+          ),
+        );
+        return createToolResponse(data);
+      } catch (error) {
+        return createErrorResponse(handleApiError(error));
+      }
+    },
+  );
 }

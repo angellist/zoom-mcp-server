@@ -395,4 +395,72 @@ export function registerMeetingTools(server: McpServer): void {
       }
     },
   );
+
+  server.registerTool(
+    "zoom_list_user_meeting_reports",
+    {
+      title: "List User Meeting Reports",
+      description:
+        "List all meetings a user hosted or attended within a date range. Unlike zoom_list_meetings which only shows hosted meetings, this shows ALL meetings including ones the user joined as a participant.\n\nUse when: finding all meetings a user was part of (hosted + attended) in a date range.\nDo NOT use when: listing only hosted/scheduled meetings (use zoom_list_meetings instead).",
+      inputSchema: {
+        user_id: z.string().min(1).describe("The user ID or email address"),
+        from: z.string().describe("Start date in YYYY-MM-DD format"),
+        to: z.string().describe("End date in YYYY-MM-DD format (max 1 month range)"),
+        type: z
+          .enum(["past", "pastOne", "pastJoined"])
+          .default("pastJoined")
+          .describe("'past' = hosted meetings, 'pastOne' = single past instances, 'pastJoined' = all meetings the user joined"),
+        page_size: z.number().int().min(1).max(300).default(30).describe("Records per page"),
+        next_page_token: z.string().optional().describe("Token for the next page"),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ user_id, from, to, type, page_size, next_page_token }) => {
+      try {
+        const params: Record<string, unknown> = { from, to, type, page_size };
+        if (next_page_token) params.next_page_token = next_page_token;
+
+        const data = await withRetry(() =>
+          makeApiRequest<{
+            from: string;
+            to: string;
+            page_size: number;
+            total_records: number;
+            next_page_token: string;
+            meetings: Array<{
+              uuid: string;
+              id: number;
+              host_id: string;
+              topic: string;
+              type: number;
+              start_time: string;
+              end_time: string;
+              duration: number;
+              total_minutes: number;
+              participants_count: number;
+              source: string;
+            }>;
+          }>(`report/users/${encodeURIComponent(user_id)}/meetings`, "GET", undefined, params),
+        );
+
+        const output = {
+          from: data.from,
+          to: data.to,
+          total: data.total_records,
+          count: data.meetings.length,
+          items: data.meetings,
+          has_more: !!data.next_page_token,
+          next_page_token: data.next_page_token || undefined,
+        };
+        return createToolResponse(output);
+      } catch (error) {
+        return createErrorResponse(handleApiError(error));
+      }
+    },
+  );
 }

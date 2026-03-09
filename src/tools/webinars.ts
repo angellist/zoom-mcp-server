@@ -246,4 +246,43 @@ export function registerWebinarTools(server: McpServer): void {
       }
     },
   );
+
+  server.registerTool(
+    "zoom_list_webinar_panelists",
+    {
+      title: "List Webinar Panelists",
+      description:
+        "List panelists for a webinar. Panelists are speakers/presenters, distinct from registrants who are attendees.\n\nUse when: checking who the speakers/presenters are for a webinar.\nDo NOT use when: listing attendee registrations (use zoom_list_webinar_registrants instead).",
+      inputSchema: {
+        webinar_id: z.string().min(1).describe("The webinar ID"),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ webinar_id }) => {
+      try {
+        const data = await withRetry(() =>
+          makeApiRequest<{
+            total_records: number;
+            panelists: Array<{
+              id: string;
+              email: string;
+              name: string;
+              join_url: string;
+            }>;
+          }>(`webinars/${encodeURIComponent(webinar_id)}/panelists`),
+        );
+        return createToolResponse({
+          total: data.total_records,
+          items: data.panelists,
+        });
+      } catch (error) {
+        return createErrorResponse(handleApiError(error));
+      }
+    },
+  );
 }

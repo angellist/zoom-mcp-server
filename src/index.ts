@@ -7,6 +7,8 @@ import { registerUserTools } from "./tools/users.js";
 import { registerMeetingTools } from "./tools/meetings.js";
 import { registerWebinarTools } from "./tools/webinars.js";
 import { registerRecordingTools } from "./tools/recordings.js";
+import { registerReportTools } from "./tools/reports.js";
+import { registerGroupTools } from "./tools/groups.js";
 
 function createServer(): McpServer {
   const server = new McpServer({
@@ -18,6 +20,8 @@ function createServer(): McpServer {
   registerMeetingTools(server);
   registerWebinarTools(server);
   registerRecordingTools(server);
+  registerReportTools(server);
+  registerGroupTools(server);
 
   return server;
 }
